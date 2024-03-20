@@ -83,4 +83,89 @@ class Tambahan extends ResourceController
         $retobj = $tambahanModel->monitoringstok();
         echo json_encode($retobj);
     }
+
+    public function delete_transaksi()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->delete_transaksi();
+        echo json_encode($retobj);
+    }
+
+    public function read_login()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->read_login();
+        echo json_encode($retobj);
+    }
+
+    public function kode_otp()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->kode_otp();
+        echo json_encode($retobj);
+    }
+    public function cek_otp()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->cek_otp();
+        echo json_encode($retobj);
+    }
+    
+    public function reset_login()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->reset_login();
+        echo json_encode($retobj);
+    }
+
+    public function cek_login()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->cek_login();
+        echo json_encode($retobj);
+    }
+
+    public function cek_kas()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->cek_kas();
+        echo json_encode($retobj);
+    }
+    public function cek_email()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->cek_email();
+        echo json_encode($retobj);
+    }
+    public function update_setting()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->update_setting();
+        echo json_encode($retobj);
+    }
+    public function read_email()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->read_email();
+        echo json_encode($retobj);
+    }
+    
+    public function omzet()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->dailyOmzet();
+        echo json_encode($retobj);
+    }
+    public function omzetharian()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->dailyCashierOmzet();
+        echo json_encode($retobj);
+    }
+    public function kategori()
+    {
+        $tambahanModel = new TambahanModel();
+        $retobj = $tambahanModel->readKategoriTop();
+        echo json_encode($retobj);
+    }
 }

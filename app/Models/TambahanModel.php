@@ -2,6 +2,7 @@
 namespace App\Models;
 use CodeIgniter\Model;
 use App\Models\ConfigModel;
+use App\Models\KasirModel;
 
 class TambahanModel extends Model
 {
@@ -206,9 +207,20 @@ class TambahanModel extends Model
                 $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
                 $subtitle.'</td></tr><tr><td>
                 <table width="100%">'.$content.'</table></td></tr></table>';
+            $newheader = '<table width="100%"><tr><td align="center"
+                style="font-size:7vw;font-weight:bold">'.$company.'</td></tr>
+                <tr><td align="center"
+                style="font-size:5vw">'.$address.'</td></tr>
+                <tr><td align="center" style="font-size:6vw;font-weight:bold">'.
+                $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+                $subtitle.'</td></tr</table>';
+            $newtable = '<table width="100%" id="table2" style="font-size:2vw;">'.$content.'</table>';;
             $result['content'] = $html;
-            $result['rows'] = $rows;
             $result['media'] = 'pdf';
+            $result['header'] = $newheader;
+            $result['table'] = $newtable;
+            $result['rows'] = $rows;
+            $result['total']=$total;
         }
         return $result;
     }
@@ -298,12 +310,22 @@ class TambahanModel extends Model
             $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
             $subtitle.'</td></tr><tr><td>
             <table width="100%">'.$content.'</table></td></tr></table>';
+        $newheader = '<table width="100%"><tr><td align="center"
+            style="font-size:7vw;font-weight:bold">'.$company.'</td></tr>
+            <tr><td align="center"
+            style="font-size:5vw">'.$address.'</td></tr>
+            <tr><td align="center" style="font-size:6vw;font-weight:bold">'.
+            $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+            $subtitle.'</td></tr</table>';
+        $newtable = '<table width="100%" id="table2" style="font-size:2vw;">'.$content.'</table>';;
         $result['content'] = $html;
-        $result['rows'] = $arr;
         $result['media'] = 'pdf';
+        $result['header'] = $newheader;
+        $result['table'] = $newtable;
+        $result['rows'] = $arr;
+        $result['total']=$totalIncome.'/'.$totalOutcome.'/'.$totalLabaKotor;
         return $result;
     }
-
     function netProfit()
     {
         $par = explode('*', $_POST['command']);
@@ -408,13 +430,257 @@ class TambahanModel extends Model
             $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
             $subtitle.'</td></tr><tr><td>
             <table width="100%">'.$content.'</table></td></tr></table>';
+        $newheader = '<table width="100%"><tr><td align="center"
+            style="font-size:7vw;font-weight:bold">'.$company.'</td></tr>
+            <tr><td align="center"
+            style="font-size:5vw">'.$address.'</td></tr>
+            <tr><td align="center" style="font-size:6vw;font-weight:bold">'.
+            $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+            $subtitle.'</td></tr</table>';
+        $newtable = '<table width="100%" id="table2" style="font-size:2vw;">'.$content.'</table>';;
         $result['content'] = $html;
         $result['media'] = 'pdf';
+        $result['header'] = $newheader;
+        $result['table'] = $newtable;
         $result['rows'] = $arr;
         $result['d1'] = $key;
+        $result['total']=$totalIncome.'/'.$totalRcvOutcome.'/'.$totalOprOutcome.'/'.$totalLabaBersih;
         return $result;
     }
+    function dailyCashierOmzet()
+    {
+        $par = explode('*', $_POST['command']);
+        $isCSV = false; // jika tidak ada opsi CSV maka defaultnya adalah PDF
+        if (isset($par[3]) && $par[3] == 'csv') {
+            $isCSV = true;
+            $folder = 'public/report/'.md5('lok_id='.$_POST['lok_id']);
+            if (!file_exists($folder)) {
+                mkdir($folder, 0755, true);
+            }
+            $file = $folder.'/cashieromzet.csv';
+            $handle = fopen($file, 'w');
+        }
+        $result['status'] = 'success';
+        $db = db_connect();
+        $query = $db->query("SELECT * FROM rms_lokasi
+            WHERE lok_id=".$_POST['lok_id']);
+        $row = $query->getRow();
+        $company = $row->lok_nama;
+        $address = $row->lok_alamat;
+        $query = $db->query("SELECT mod_checkin, mod_checkout, kas_id,
+            kas_nama, mod_awal, mod_akhir, mod_status FROM pos_modal
+            LEFT JOIN pos_kasir ON kas_id=mod_kas_id
+            WHERE kas_lok_id=".$_POST['lok_id']." AND (mod_checkin BETWEEN
+            STR_TO_DATE('".$par[1]." 00:00:00','%d-%m-%Y %H:%i:%s') AND
+            STR_TO_DATE('".$par[2]." 23:59:59','%d-%m-%Y %H:%i:%s'))
+            ORDER BY mod_checkin");
+        $rows = $query->getResult();
+        $title = 'Laporan Omzet Harian Per Kasir';
+        $subtitle = 'Tanggal '.$par[1].' s/d '.$par[2];
+        if ($isCSV) {
+            $csv[] = array('','',$company);
+            $csv[] = array('','',$address);
+            $csv[] = array('','',$title);
+            $csv[] = array('','',$subtitle);
+            $csv[] = array('No.','Check-In','Check-Out','Nama Kasir','Modal Awal',
+                'Modal Akhir', 'Omzet');
+        }
+        else {
+            $content = '<tr style="font-weight:bold">
+                <td width="0%" align="right">No.</td>
+                <td width="0%" nowrap style="padding:0 5px 0 5px">Check-In</td>
+                <td width="0%" nowrap style="padding:0 5px 0 5px">Check-Out</td>
+                <td width="100%" nowrap>Nama Kasir</td>
+                <td width="0%" nowrap align="right">Modal Awal</td>
+                <td width="0%" nowrap align="right">Modal Akhir</td>
+                <td width="0%" nowrap align="right">Omzet</td>
+                </tr>';
+        }
+        $no = 1;
+        $total = 0;
+        foreach($rows as $row) {
+            if ($row->mod_status == 'CHECKEDOUT') {
+                $query = $db->query("SELECT SUM(not_total-not_disnom) omzet
+                    FROM pos_nota
+                    WHERE not_tanggal >= '".$row->mod_checkin."' AND not_tanggal <= '".
+                    $row->mod_checkout."' AND not_kas_id=".$row->kas_id);
+            }
+            else {
+                $query = $db->query("SELECT SUM(not_total-not_disnom) omzet
+                    FROM pos_nota
+                    WHERE not_tanggal >= '".$row->mod_checkin."'
+                    AND not_kas_id=".$row->kas_id);
+            }
+            $row->omzet = $query->getRow()->omzet;
+            $date = date_create($row->mod_checkin);
+            $row->mod_checkin = date_format($date, 'd-m-Y H:i');
+            $date = date_create($row->mod_checkout);
+            $row->mod_checkout = date_format($date, 'd-m-Y H:i');
+            if ($isCSV) {
+                $csv[] = array($no++,$row->mod_checkedin,$row->mod_checkout,
+                    $row->kas_nama,$row->mod_awal,$row->mod_akhir,$row->omzet);
+            }
+            else {
+                if ($row->mod_status == 'CHECKEDIN')
+                    $akhir = '';
+                else
+                    $akhir = 'Rp.'.number_format($row->mod_akhir, 2);
+                $content .= '<tr>
+                    <td align="right">'.$no++.'</td>
+                    <td nowrap style="padding:0 3px 0 3px">'.$row->mod_checkin.'</td>
+                    <td nowrap style="padding:0 3px 0 3px">'.$row->mod_checkout.'</td>
+                    <td>'.$row->kas_nama.'</td>
+                    <td align="right">Rp.'.number_format($row->mod_awal, 2).'</td>
+                    <td align="right">'.$akhir.'</td>
+                    <td align="right">Rp.'.number_format($row->omzet, 2).'</td>
+                    </tr>';
+            }
+            $total += $row->omzet;
+        }
+        if ($isCSV) {
+            $csv[] = array('','','','','','',$total);
+            foreach($csv as $c) {
+                fputcsv($handle, $c);
+            }
+            fclose($handle);
+            $url = base_url('report/'.md5('lok_id='.$_POST['lok_id']).
+                '/cashieromzet.csv');
+            $result['content'] = '<div><a href="'.$url.'">Download CSV</a></div>';
+            $result['media'] = 'csv';
+        }
+        else {
+            $content .= '<tr><td></td><td></td><td></td><td></td><td></td><td></td>
+                <td align="right" style="font-weight:bold">Rp.'.
+                number_format($total, 2).'</td></tr>';
+            $html = '<table width="100%"><tr><td align="center"
+                style="font-size:2em;font-weight:bold">'.$company.'</td></tr>
+                <tr><td align="center"
+                style="font-size:1.2em">'.$address.'</td></tr>
+                <tr><td align="center" style="font-size:1.5em;font-weight:bold">'.
+                $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+                $subtitle.'</td></tr><tr><td>
+                <table width="100%">'.$content.'</table></td></tr></table>';
+            $newheader = '<table width="100%"><tr><td align="center"
+                style="font-size:7vw;font-weight:bold">'.$company.'</td></tr>
+                <tr><td align="center"
+                style="font-size:5vw">'.$address.'</td></tr>
+                <tr><td align="center" style="font-size:6vw;font-weight:bold">'.
+                $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+                $subtitle.'</td></tr</table>';
+            $newtable = '<table width="100%" id="table2" style="font-size:2vw;">'.$content.'</table>';;
+            $result['content'] = $html;
+            $result['media'] = 'pdf';
+            $result['header'] = $newheader;
+            $result['table'] = $newtable;
+            $result['total']=$total;
+        }
+        return $result;
+    }
+    function dailyOmzet()
+    {
+        $par = explode('*', $_POST['command']);
+        $result['status'] = 'success';
+        $db = db_connect();
+        $query = $db->query("SELECT * FROM rms_lokasi
+            WHERE lok_id=".$_POST['lok_id']);
+        $row = $query->getRow();
+        $company = $row->lok_nama;
+        $address = $row->lok_alamat;
+        $d1 = date_create_from_format('d-m-Y', $par[1]);
+        $d2 = date_create_from_format('d-m-Y', $par[2]);
+        $ed1 = explode('-', $par[1]);
+        $newd1 = trim($ed1[2]) . '-' . trim($ed1[1]) . '-' . trim($ed1[0]);
+        $ed2 = explode('-', $par[2]);
+        $newd2 = trim($ed2[2]) . '-' . trim($ed2[1]) . '-' . trim($ed2[0]);
 
+        $query = $db->query("
+            SELECT not_id, not_nomor, DATE_FORMAT(not_tanggal, '%d-%m-%Y') tanggal,
+            SUM(not_total) total 
+            FROM pos_nota
+            WHERE not_lok_id=".$_POST['lok_id']." AND (STR_TO_DATE(not_tanggal,'%Y-%m-%d') BETWEEN
+            '".$newd1."' AND '".$newd2."')
+            GROUP BY not_id
+            ORDER BY not_id;");
+        // SELECT not_id, not_nomor, DATE_FORMAT(not_tanggal, '%Y-%m-%d') tanggal,
+        // SUM(not_total) total 
+        // FROM pos_nota
+        // WHERE not_lok_id=".$_POST['lok_id']." AND (not_tanggal BETWEEN
+        // rbs_tolocaldate(STR_TO_DATE('".$par[1]."','%d-%m-%Y')) AND date_add(rbs_tolocaldate(STR_TO_DATE('".$par[2]."','%d-%m-%Y')),interval 1 day ))
+        // GROUP BY not_id
+        // ORDER BY not_id
+        $rows = $query->getResult();
+        $result['sql'] = (string)($db->getLastQuery());
+        $title = 'Laporan Omzet';
+        $subtitle = 'Tanggal '.$par[1].' s/d '.$par[2];
+        $content = '<tr style="font-weight:bold">
+            <td width="0%" align="right">No.</td>
+            <td width="0%" nowrap style="padding:0 5px 0 5px">Nomor Nota</td>
+            <td width="0%" nowrap style="padding:0 5px 0 5px">Item</td>
+            <td width="0%" nowrap style="padding:0 5px 0 5px" align="right">Jumlah</td>
+            <td width="0%" nowrap style="padding:0 5px 0 5px" align="right">Harga</td>
+            </tr>';
+        $no = 1;
+        $totalomzet=0;
+        foreach($rows as $row) {
+            $query2 = $db->query("SELECT * 
+                FROM pos_notaitem
+                LEFT JOIN pos_item ON itm_id=nit_itm_id 
+                WHERE nit_not_id='".$row->not_id."' 
+                GROUP BY nit_id
+                ORDER BY nit_id");
+            $rows2 = $query2->getResult();
+            foreach($rows2 as $row2) {
+                $content .= '<tr>
+                    <td align="right">'.$no++.'</td>
+                    <td style="padding:0 5px 0 5px">'.$row->not_nomor.'</td>
+                    <td width="100%" style="padding:0 5px 0 5px;">'.$row2->itm_nama.'</td>
+                    <td style="padding:0 5px 0 5px" align="right">'.$row2->nit_qty.'</td>
+                    <td style="padding:0 5px 0 5px" align="right">Rp.'.number_format($row2->nit_total).'</td>
+                </tr>';
+            }
+            $content .= '<tr>
+                <td align="right"></td>
+                <td style="padding:0 5px 0 5px"></td>
+                <td width="100%" style="padding:0 5px 0 5px"></td>
+                <td style="padding:0 5px 0 5px" align="right"></td>
+                <td style="padding:0 5px 0 5px;" align="right">Rp.'.number_format($row->total).'</td>
+            </tr><tr">
+                <td align="right"></td>
+                <td style="padding:0 5px 0 5px"></td>
+                <td width="100%" style="padding:0 5px 0 5px"></td>
+                <td style="padding:0 5px 0 5px" align="right"></td>
+                <td style="padding:0 5px 0 5px" align="right">&nbsp;</td>
+            </tr>';
+            $totalomzet += $row->total;
+        }
+        $content .= '<tr><td></td><td></td>
+            <td align="right" style="font-weight:bold;padding:0 5px 0 5px"></td>
+            <td align="right" style="font-weight:bold;padding:0 5px 0 5px"></td>
+            <td align="right" style="font-weight:bold;padding:0 5px 0 5px">Rp.'.
+            number_format($totalomzet, 2).'</td></tr>';
+            $html = '<table width="100%"><tr><td align="center"
+            style="font-size:2em;font-weight:bold">'.$company.'</td></tr>
+            <tr><td align="center"
+            style="font-size:1.2em">'.$address.'</td></tr>
+            <tr><td align="center" style="font-size:1.5em;font-weight:bold">'.
+            $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+            $subtitle.'</td></tr><tr><td>
+            <table width="100%">'.$content.'</table></td></tr></table>';
+        $newheader = '<table width="100%"><tr><td align="center"
+            style="font-size:7vw;font-weight:bold">'.$company.'</td></tr>
+            <tr><td align="center"
+            style="font-size:5vw">'.$address.'</td></tr>
+            <tr><td align="center" style="font-size:6vw;font-weight:bold">'.
+            $title.'</td></tr><tr><td align="center" style="padding-bottom:10">'.
+            $subtitle.'</td></tr</table>';
+        $newtable = '<table width="100%" id="table2" style="font-size:2vw;">'.$content.'</table>';;
+        $result['content'] = $html;
+        $result['media'] = 'pdf';
+        $result['header'] = $newheader;
+        $result['table'] = $newtable;
+        $result['total']=$newd1;
+        return $result;
+    }
     function poread()
     {
         $db = db_connect();
@@ -607,23 +873,20 @@ class TambahanModel extends Model
     }
     function columnList()
     {
-        // itm_photo tidak ikut diselect karena data BLOB terlalu besar
-        // menyebabkan lama saat loading
-        // itm_photo hanya diload saat mau menampilkan saja
-
         return 'itm_id,itm_kode,itm_lok_id,itm_nama,itm_satuan,itm_stokaman,
         itm_tgstokopnam,itm_stok,itm_satuan1,itm_satuan1hpp,itm_satuan1hrg,
         itm_satuan2,itm_satuan2hpp,itm_satuan2hrg,itm_satuan2of1,
         itm_satuan3,itm_satuan3hpp,itm_satuan3hrg,itm_satuan3of1,
         itm_gallery,itm_pakaistok,itm_durasi,itm_satuandurasi';
     }
-
     function readGallery()
     {
         $db = db_connect();
         $filter = "itm_lok_id=".$_POST['lok_id'];
         if (isset($_POST['key_val']))
             $filter .= " AND itm_nama LIKE '%".$_POST['key_val']."%'";
+        if (isset($_POST['category_val']))
+            $filter .= " AND itm_category LIKE '%".$_POST['category_val']."%'";
         $query = $db->query("SELECT itm_photo FROM pos_item
             WHERE ".$filter." AND itm_gallery=1
             ORDER BY itm_nama");
@@ -640,6 +903,16 @@ class TambahanModel extends Model
                 $row->itm_photo = base64_encode($imageData);
             }
         }
+        $result['data'] = $rows;
+        $result['status'] = 'success';
+        return $result;
+    }
+    function readKategoriTop()
+    {
+        $db = db_connect();
+        $filter = "itm_lok_id=".$_POST['lok_id'];
+        $query = $db->query("SELECT count(*) jumlah, itm_kategori, itk_logo FROM `pos_item` LEFT JOIN pos_itemkategori ON itm_kategori = itk_kategori WHERE itm_kategori IS NOT NULL AND itm_kategori <> '' AND itk_id IS NOT NULL AND itm_gallery=1 AND ".$filter." GROUP BY itm_kategori ORDER BY count(*) DESC LIMIT 7");
+        $rows = $query->getResult();
         $result['data'] = $rows;
         $result['status'] = 'success';
         return $result;
@@ -853,9 +1126,6 @@ class TambahanModel extends Model
                 
                 array_push($detail,$dekodejson);
             }
-            
-            
-
             $row->stok_detail=$detail;
             $detail=[];
         }
@@ -863,5 +1133,222 @@ class TambahanModel extends Model
         $result['status'] = 'success';
         return $result;
     }
+    function delete_transaksi(){
+        $db = db_connect();
+        $nota =$db->query("SELECT * FROM pos_nota WHERE not_id = '". $_POST['not_id'] . "'");
+        $datanota = $nota->getRow();
+        $result['sql'] = (string)($db->getLastQuery());
+        $notaitem =$db->query("SELECT * FROM pos_notaitem WHERE nit_not_id = '". $_POST['not_id'] . "'");
+        $datanotaitem = $notaitem->getResult();
+        $result['sql2'] = (string)($db->getLastQuery());
+        $db->query("ALTER TABLE pos_dumpnota AUTO_INCREMENT = 1");
+        $db->query("INSERT INTO pos_dumpnota 
+        SELECT null, p.* FROM pos_nota p WHERE not_id = '". $_POST['not_id'] . "'");
+        $db->query("ALTER TABLE pos_dumpnotaitem AUTO_INCREMENT = 1");
+        $db->query("INSERT INTO pos_dumpnotaitem 
+        SELECT null, q.* FROM pos_notaitem q WHERE nit_not_id = '". $_POST['not_id'] . "'");
+        
+        if($datanota->not_dicicil=='1'){
+            $db->query("ALTER TABLE pos_dumpcicilan AUTO_INCREMENT = 1");
+            $db->query("INSERT INTO pos_dumpcicilan 
+            SELECT null, q.* FROM pos_cicilan q WHERE cil_not_id = '". $_POST['not_id'] . "'");
+        }
+        $this->retur($datanotaitem,$datanota->not_nomor,'Hapus transaksi',$_POST['not_id']);
+        // $db->query("DELETE FROM pos_nota WHERE not_id = '". $_POST['not_id'] . "'");
+        $result['data'] = $datanota;
+        
+        return $result;
+    }
 
+    function retur($data,$nomor,$alasan,$id)
+    {
+        $db = db_connect();
+        $result['status'] = 'success';
+        $new_id = '';
+        $date = date_create(null, timezone_open("Asia/Jakarta"));
+        $builder = $db->table('inv_retur');
+        $builder->set('ret_id', null);
+        $builder->set('ret_nomor', $nomor);
+        $builder->set('ret_tanggal', date_format($date, 'Y-m-d H:i:s'));
+        $builder->set('ret_ket', $alasan);
+        if ($builder->insert()) {
+            $nota = $db->query("SELECT * FROM inv_retur WHERE ret_nomor='".
+                $nomor."' ");
+            $rownota = $nota->getRow();
+            $kode=substr($rownota->ret_nomor, 0, 2);
+            
+            foreach($data as $r) {
+                $item =$db->query("SELECT * FROM pos_item WHERE itm_id = '". $r->nit_itm_id . "'");
+                $dataitem = $item->getRow();
+                $builder = $db->table('inv_returitem');
+                $builder->set('reti_id', null);
+                $builder->set('reti_ret_id', $rownota->ret_id);
+                $builder->set('reti_itm_id', $r->nit_itm_id);
+                $builder->set('reti_qty', (int)$r->nit_qty*(int)$r->nit_satuan0of1);
+                $builder->set('reti_ket', 'Hapus Item Transaksi');
+                $result['sql'] = (string)($db->getLastQuery());
+                if ($builder->insert()) {
+                    if($kode[0].$kode[1]!='RE'){
+                        $totalstok=(int)$dataitem->itm_stok+((int)$r->nit_qty*(int)$r->nit_satuan0of1);
+                        $db->query("DELETE FROM pos_nota WHERE not_id = '". $id . "'");
+                        $db->query("DELETE FROM pos_notaitem WHERE nit_not_id = '". $id . "'");
+                        $db->query("UPDATE pos_item SET itm_stok= '".$totalstok."' WHERE itm_id = '". $r->nit_itm_id . "'");
+                    }
+                }
+            }
+        }
+        return $result;
+    }
+    public function cek_login()
+    {
+        $db = db_connect();
+        $result['data'] = [];
+        $query = $db->query("SELECT count(kas_id) total  
+            FROM pos_kasir
+            WHERE kas_nick='".$_POST['username']."' ");
+        $row = $query->getRow();
+        $result['sql'] = (string)($db->getLastQuery());
+        if($row->total>=2)
+        return false;
+        else
+        return true;
+    }
+    public function cek_kas()
+    {
+        $db = db_connect();
+        $result['data'] = [];
+        $strQuery='';
+        if (isset($_POST['kode']) && $_POST['kode']!='')
+        {
+            $strQuery = $strQuery." AND com_kode='".$_POST['kode']."' ";
+        }
+        $query = $db->query("SELECT kas_id  
+            FROM pos_kasir 
+            LEFT JOIN rms_lokasi ON kas_lok_id=lok_id 
+            LEFT JOIN rms_company ON lok_com_id=com_id 
+            WHERE kas_nick='".$_POST['username']."' ".$strQuery);
+        $row = $query->getRow();
+        return $row;
+    }
+    public function kode_otp()
+    {
+        $db = db_connect();
+        $result['status'] = 'success';
+        $new_id = '';
+        $date = date_create(null, timezone_open("Asia/Jakarta"));
+        $db->query("DELETE FROM pos_kodeotp WHERE otp_kas_id =  '".$_POST['kas_id']."'");
+        $db->query("INSERT INTO pos_kodeotp VALUES (null,'".$_POST['kas_id']."','".$_POST['otp_kode']."') ");
+    }
+
+    public function update_setting()
+    {
+        $db = db_connect();
+        $result['status'] = 'success';
+        $new_id = '';
+        $date = date_create(null, timezone_open("Asia/Jakarta"));
+        $db->query("UPDATE rms_lokasi SET lok_app_setting = '".$_POST['app_setting']."' WHERE lok_id = '".$_POST['lok_id']."'");
+        $result['sql'] = (string)($db->getLastQuery());
+        return $result;
+    }
+    public function read_email()
+    {
+        $db = db_connect();
+        $result['status'] = 'success';
+        $new_arr = [];
+        $date = date_create(null, timezone_open("Asia/Jakarta"));
+        $query=$db->query("SELECT * FROM pos_email 
+        WHERE ema_email LIKE '%".$_POST['nama_email']."%'");
+        $data = $query->getResult();
+        foreach($data as $row) {
+            array_push($new_arr, $row->ema_email);
+        }
+        return $new_arr;
+    }
+    public function cek_otp()
+    {
+        $db = db_connect();
+        $result['data'] = [];
+        $query = $db->query("SELECT count(*) total  
+            FROM pos_kodeotp
+            WHERE otp_kode='".$_POST['otp_kode']."' AND otp_kas_id='".$_POST['kas_id']."'");
+        $row = $query->getRow();
+        $result['sql'] = (string)($db->getLastQuery());
+        if($row->total>=1)
+        return true;
+        else
+        return false;
+    }
+    public function cek_email()
+    {
+        $db = db_connect();
+        $result['data'] = [];
+        $query = $db->query("SELECT count(*) total  
+            FROM pos_email
+            WHERE ema_email='".$_POST['nama_email']."'");
+        $row = $query->getRow();
+        $result['sql'] = (string)($db->getLastQuery());
+        if($row->total>=1)
+        return true;
+        else
+        return false;
+    }
+    public function reset_login()
+    {
+        $db = db_connect();
+        $result['data'] = [];
+        if (isset($_POST['password']) && $_POST['password']!='')
+        {
+            $str = " MD5('".$_POST['password']."') ";
+        }
+        else
+        {
+            $str="MD5('admin123')";
+        }
+        $db->query(" UPDATE pos_kasir 
+        SET kas_password = ".$str." 
+        WHERE kas_id='".$_POST['kas_id']."' ");
+        $result['sql'] = (string)($db->getLastQuery());
+        return $result;
+    }
+    public function read_login()
+    {
+        $db = db_connect();
+        $result['status'] = 'failed';
+        $result['data'] = [];
+        $strQuery='';
+        if (isset($_POST['kode']) && $_POST['kode']!='' && $_POST['kode']!='null')
+        {
+            $strQuery = $strQuery." AND com_kode='".$_POST['kode']."' ";
+        }
+        $query = $db->query("SELECT kas_id, kas_nama, kas_gender, kas_wa, kas_lok_id,
+            kas_com_id, kas_role, com_kode, lok_id, lok_app_setting  
+            FROM pos_kasir
+            LEFT JOIN rms_lokasi ON kas_lok_id=lok_id 
+            LEFT JOIN rms_company ON lok_com_id=com_id 
+            WHERE kas_nick='".$_POST['username']."'
+            AND (kas_password=MD5('".$_POST['password']."')) ".$strQuery);
+        $error = $db->error();
+        if ($error['code'] == 0) {
+            $row = $query->getRow();
+            if($row) {
+                $configModel = new ConfigModel();
+                $configModel->backupDatabase();
+                $kasirModel = new KasirModel();
+                $result['data'] = $query->getRow();
+                $result['funkode'] = $kasirModel->getFunCode($db, $row);
+                $result['status'] = 'success';
+            }
+            else {
+                $result['error']['title'] = 'Cek Data Login';
+                $result['error']['message'] = 'Username atau password tidak valid';
+                $result['sql'] = (string)($db->getLastQuery());
+            }
+        }
+        else {
+            $result['error']['title'] = 'Cek Data Login';
+            $result['error']['message'] = $error['message'];
+            $result['sql'] = (string)($db->getLastQuery());
+        }
+        return $result;
+    }
 }
