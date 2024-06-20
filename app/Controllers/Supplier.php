@@ -12,6 +12,13 @@ class Supplier extends ResourceController
         echo json_encode($retobj);
     }
 
+    public function read_count()
+    {
+        $supplierModel = new SupplierModel();
+        $retobj = $supplierModel->read_count();
+        echo json_encode($retobj);
+    }
+
     public function search()
     {
         $supplierModel = new SupplierModel();

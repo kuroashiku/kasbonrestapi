@@ -18,12 +18,19 @@ class Item extends ResourceController
         $retobj = $itemModel->read();
         echo json_encode($retobj);
     }
+    
+    public function readcategories()
+    {
+        $itemModel = new ItemModel();
+        $retobj = $itemModel->readForCategories();
+        echo json_encode($retobj);
+    }
 
     // membaca item untuk ditampilkan dalam pilihan PO
     // yaitu item-item dengan tipe tidak "pakaistok" misal jasa
     // fungsi ini juga dipakai oleh BOM, karena item BOM
     // adalah item yang non jasa
-
+    
     public function readforpo()
     {
         $itemModel = new ItemModel();
@@ -110,6 +117,13 @@ class Item extends ResourceController
     {
         $itemModel = new ItemModel();
         $retobj = $itemModel->proses();
+        //echo json_encode($retobj);
+    }
+    
+    public function update_delete()
+    {
+        $itemModel = new ItemModel();
+        $retobj = $itemModel->updateDeleteItem();
         //echo json_encode($retobj);
     }
 }

@@ -8,31 +8,37 @@ class NotaModel extends Model
     function read()
     {
         $db = db_connect();
+        $page = isset($_POST['page'])?$_POST['page']:null;
+        $rows = isset($_POST['rows'])?$_POST['rows']:null;
         $result['status'] = 'failed';
         $result['data'] = [];
         if (isset($_POST['orifields']) && $_POST['orifields']=='yes')
             $strSelect = "SELECT not_id, not_nomor, not_tanggal,
-                not_total, not_dibayar, not_kembalian, kas_id, kas_nama, cus_nama,
+                not_total, not_dibayar, not_kembalian, kas_id, kas_nama, cus_nama, 
                 not_sft_id, not_diskon, not_disnom, not_catatan,
-                not_dicicil, not_jatuhtempo, not_carabayar, byr_nama";
+                not_dicicil, not_jatuhtempo, not_carabayar, byr_nama, not_status";
         else
-            $strSelect = "SELECT not_id id, not_nomor nomor, not_tanggal tanggal,
+            $strSelect = "SELECT not_id id, not_nomor nomor, not_tanggal tanggal, not_id, 
                 not_total total, not_dibayar dibayar, not_kembalian kembalian,
                 kas_id, kas_nama, cus_nama, not_sft_id sft_id,
                 not_diskon diskon, not_disnom disnom, not_catatan catatan,
-                not_id, not_dicicil, not_dicicil dicicil, not_jatuhtempo jatuhtempo,
-                not_carabayar, byr_nama carabayar";
+                not_dicicil dicicil, not_jatuhtempo jatuhtempo,
+                byr_nama carabayar, not_status";
         $strQuery = $strSelect." FROM pos_nota
             LEFT JOIN pos_kasir ON kas_id=not_kas_id
             LEFT JOIN pos_customer ON cus_id=not_cus_id
             LEFT JOIN pos_carabayar ON byr_kode=not_carabayar
-            WHERE not_lok_id=".$_POST['lok_id'];
+            WHERE not_lok_id=".$_POST['lok_id']." AND not_deleteddate IS NULL ";
         if (isset($_POST['q'])) {
             $strQuery .= " AND (not_catatan LIKE '%".$_POST['q']."%'
                 OR not_nomor LIKE '%".$_POST['q']."%'
                 OR EXISTS(SELECT 1 FROM pos_notaitem
                 LEFT JOIN pos_item ON itm_id=nit_itm_id
                 WHERE nit_not_id=not_id AND itm_nama LIKE '%".$_POST['q']."%'))";
+        }
+        if (isset($_POST['datepast']) && isset($_POST['datenow'])) {
+            $strQuery .= " AND not_tanggal BETWEEN '".$_POST['datepast']."'
+                AND '".$_POST['datenow']."'";
         }
         if (isset($_POST['thn']) && isset($_POST['bln'])) {
             $strQuery .= " AND YEAR(not_tanggal)=".$_POST['thn']."
@@ -45,7 +51,10 @@ class NotaModel extends Model
             $strQuery .= " AND not_id=".$_POST['id'];
         }
         $strQuery .= " ORDER BY not_id DESC";
+        if ($page)
+            $strQuery .= " LIMIT " . ($page - 1) * $rows . "," . $rows;
         $query = $db->query($strQuery);
+        $result['sql'] = (string)($db->getLastQuery());
         $error = $db->error();
         if ($error['code'] == 0) {
             $result['status'] = 'success';
@@ -396,6 +405,7 @@ class NotaModel extends Model
                 $builder->set('not_disnom', $_POST['disnom']);
                 $builder->set('not_catatan', $_POST['catatan']);
                 $builder->set('not_sft_id', $_POST['sft_id']);
+                $builder->set('not_pajak', $_POST['pajak']);
                 $builder->set('not_dicicil', $_POST['dicicil']);
                 $builder->set('not_jatuhtempo', $_POST['jatuhtempo']);
                 $builder->set('not_carabayar', isset($_POST['carabayar'])?
@@ -489,7 +499,28 @@ class NotaModel extends Model
         $result['error'] = $error;
         return $result;
     }
-
+    function deleteNotaNew(){
+        $db = db_connect();
+        $result['status'] = 'failed';
+        if(!empty($_SERVER['HTTP_X_FORWARDED_FOR'])) 
+            $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+        else
+            $ip = $_SERVER['REMOTE_ADDR'];
+        $filter='null';
+        if (isset($_POST['log_reason']))
+            $filter = "'".$_POST['log_reason']."'";
+        $db->query("UPDATE pos_nota SET not_deleteddate='".date("Y-m-d H:i:s")."' WHERE not_id='".$_POST['not_id']."'");
+        $result['sql2'] = (string)($db->getLastQuery());
+        $db->query("INSERT INTO pos_log(log_kas_id,log_tabel,log_aksi,log_date,log_table_id,log_reason,log_ip) VALUES('".$_POST['kas_id']."','pos_nota','DELETE','".date("Y-m-d H:i:s")."','".$_POST['not_id']."',".$filter.",'".$ip."')");
+        $error = $db->error();
+        if ($error['code'] == 0)
+            $result['status'] = 'success';
+        else
+            $result['errmsg'] = 'Gagal menghapus data. Kemungkinan item barang tersebut sudah dipakai dalam salah satu transaksi';
+        $result['sql'] = (string)($db->getLastQuery());
+        $result['error'] = $error;
+        return $result;
+    }
     function receipt()
     {
         $db = db_connect();

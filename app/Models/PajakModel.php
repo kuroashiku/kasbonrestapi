@@ -2,7 +2,7 @@
 namespace App\Models;
 use CodeIgniter\Model;
 
-class SupplierModel extends Model
+class PajakModel extends Model
 {
     function read()
     {
@@ -11,18 +11,18 @@ class SupplierModel extends Model
         $result['data'] = [];
         $clause = '';
         
-        if (isset($_POST['com_id']))
-            $clause = " WHERE sup_com_id=".$_POST['com_id'];
+        if (isset($_POST['lok_id']))
+            $clause = " WHERE paj_lok_id=".$_POST['lok_id'];
         if (isset($_POST['key_val']))
-            $clause .= " AND (sup_nama LIKE '%".$_POST['key_val']."%')";
-        $query = $db->query("SELECT * FROM inv_supplier".$clause." ORDER BY sup_id DESC");
+            $clause .= " AND (paj_nama LIKE '%".$_POST['key_val']."%')";
+        $query = $db->query("SELECT * FROM pos_pajak".$clause." ORDER BY paj_id DESC");
         $error = $db->error();
         if ($error['code'] == 0) {
             $result['data'] = $query->getResult();
             $result['status'] = 'success';
         }
         else {
-            $result['error']['title'] = 'Baca Data Supplier';
+            $result['error']['title'] = 'Baca Data Pajak';
             $result['error']['message'] = $error['message'];
         }
         return $result;
@@ -34,16 +34,16 @@ class SupplierModel extends Model
         $result['status'] = 'failed';
         $result['data'] = [];
         $clause = '';
-        if (isset($_POST['com_id']))
-            $clause = " WHERE sup_com_id=".$_POST['com_id'];
-        $query = $db->query("SELECT count(*) total FROM inv_supplier".$clause." ORDER BY sup_id DESC");
+        if (isset($_POST['lok_id']))
+            $clause = " WHERE paj_lok_id=".$_POST['lok_id'];
+        $query = $db->query("SELECT count(*) total FROM pos_pajak".$clause." ORDER BY paj_id DESC");
         $error = $db->error();
         if ($error['code'] == 0) {
             $result['data'] = $query->getRow();
             $result['status'] = 'success';
         }
         else {
-            $result['error']['title'] = 'Baca Data Supplier';
+            $result['error']['title'] = 'Baca Data Pajak';
             $result['error']['message'] = $error['message'];
         }
         return $result;
@@ -56,9 +56,9 @@ class SupplierModel extends Model
         $result['data'] = [];
         $qClause = "";
         if (isset($_POST['q']))
-            $qClause = " AND sup_nama LIKE '%".$_POST['q']."%'";
-        $queryStr = "SELECT * FROM inv_supplier
-            WHERE sup_com_id=".$_POST['com_id'].$qClause." ORDER BY sup_id DESC";
+            $qClause = " AND paj_nama LIKE '%".$_POST['q']."%'";
+        $queryStr = "SELECT * FROM pos_pajak
+            WHERE paj_lok_id=".$_POST['lok_id'].$qClause." ORDER BY paj_id DESC";
         $query = $db->query($queryStr);
         $error = $db->error();
         if ($error['code'] == 0) {
@@ -72,29 +72,29 @@ class SupplierModel extends Model
         return $result;
     }
 
-    function saveSupplier()
+    function savePajak()
     {
         $db = db_connect();
         $result['status'] = 'success';
         $result['data'] = [];
         $data = $_POST;
-        if ($data['sup_id'] == -1) { // new record
+        if ($data['paj_id'] == -1) { // new record
             // Loop ID mulai dari 1 dicari yang belum terpakai, karena mungkin ada ID
-            // yang dihapus di tengah, jadi tidak harus MAX(sup_id)+1
-            // Dan pencarian ini tidak tergantung com_id
+            // yang dihapus di tengah, jadi tidak harus MAX(paj_id)+1
+            // Dan pencarian ini tidak tergantung lok_id
 
-            $query = $db->query("SELECT sup_id FROM inv_supplier ORDER BY sup_id");
+            $query = $db->query("SELECT paj_id FROM pos_pajak ORDER BY paj_id");
             $error = $db->error();
             if ($error['code'] == 0) {
                 $rows = $query->getResult();
                 $available_id = null;
                 foreach($rows as $row) {
-                    if (!$available_id) $available_id = $row->sup_id+1;
-                    elseif ($available_id == $row->sup_id) $available_id++;
+                    if (!$available_id) $available_id = $row->paj_id+1;
+                    elseif ($available_id == $row->paj_id) $available_id++;
                     else break;
                 }
-                $data['sup_id'] = $available_id?$available_id:1;
-                $db->query("INSERT INTO inv_supplier(sup_id) VALUES(".$data['sup_id'].")");
+                $data['paj_id'] = $available_id?$available_id:1;
+                $db->query("INSERT INTO pos_pajak(paj_id) VALUES(".$data['paj_id'].")");
                 $error = $db->error();
                 if ($error['code'] != 0) {
                     $result['error']['title'] = 'Simpan ID Supplier Baru';
@@ -109,20 +109,19 @@ class SupplierModel extends Model
             }
         }
         if ($result['status'] == 'success') {
-            $builder = $db->table('inv_supplier');
-            $builder->set('sup_com_id', $data['sup_com_id']);
-            $builder->set('sup_nama', $data['sup_nama']);
-            $builder->set('sup_alamat', $data['sup_alamat']);
-            $builder->set('sup_wa', $data['sup_wa']);
-            $builder->where('sup_id', $data['sup_id'], false);
+            $builder = $db->table('pos_pajak');
+            $builder->set('paj_lok_id', $data['paj_lok_id']);
+            $builder->set('paj_nama', $data['paj_nama']);
+            $builder->set('paj_value', $data['paj_value']);
+            $builder->where('paj_id', $data['paj_id'], false);
             if ($builder->update()) {
-                $query = $db->query("SELECT * FROM inv_supplier
-                    WHERE sup_id=".$data['sup_id']);
+                $query = $db->query("SELECT * FROM pos_pajak
+                    WHERE paj_id=".$data['paj_id']);
                 $row = $query->getRow();
                 $result['data'] = $row;
             }
             else {
-                $result['error']['title'] = 'Update Data Supplier';
+                $result['error']['title'] = 'Update Data Pajak';
                 $result['error']['message'] = 'Proses update data gagal. Query: '.
                     (string)($db->getLastQuery());
                 $result['status'] = 'failed';
@@ -131,16 +130,16 @@ class SupplierModel extends Model
         return $result;
     }
 
-    function deleteSupplier()
+    function deletePajak()
     {
         $db = db_connect();
         $result['status'] = 'failed';
-        $db->query("DELETE FROM inv_supplier WHERE sup_id=".$_POST['sup_id']);
+        $db->query("DELETE FROM pos_pajak WHERE paj_id=".$_POST['paj_id']);
         $error = $db->error();
         if ($error['code'] == 0)
             $result['status'] = 'success';
         else {
-            $result['error']['title'] = 'Hapus Data Supplier';
+            $result['error']['title'] = 'Hapus Data Pajak';
             $result['error']['message'] = $error['message'];
         }
         return $result;

@@ -127,6 +127,7 @@ class PiutangModel extends Model
                 cil_sisa=".$_POST['cil_sisa']."
                 WHERE cil_id='".$_POST['cil_id']."'");
             $error = $db->error();
+            $result['sql'] = (string)($db->getLastQuery());
             if ($error['code'] == 0) {
                 $_POST['not_id'] = $_POST['cil_not_id'];
                 $temp = $this->read();

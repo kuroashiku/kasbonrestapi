@@ -11,16 +11,20 @@ class DraftnotaModel extends Model
         $result['data'] = [];
         $strSelect = "SELECT dot_id, dot_total total,
             kas_id, kas_nama, cus_id, cus_nama,
-            dot_diskon diskon, dot_disnom disnom, dot_catatan catatan";
+            dot_diskon diskon, dot_disnom disnom, dot_catatan catatan, dot_status status, dot_pajak pajak, mej_nama, mej_id ";
         $strQuery = $strSelect." FROM pos_draftnota
             LEFT JOIN pos_kasir ON kas_id=dot_kas_id
             LEFT JOIN pos_customer ON cus_id=dot_cus_id
+            LEFT JOIN pos_meja ON mej_id=dot_mej_id
             WHERE dot_kas_id=".$_POST['kas_id'];
         if (isset($_POST['q'])) {
             $strQuery .= " AND (dot_catatan LIKE '%".$_POST['q']."%'
                 OR EXISTS(SELECT 1 FROM pos_draftnotaitem
                 LEFT JOIN pos_item ON itm_id=dit_itm_id
                 WHERE dit_dot_id=dot_id AND itm_nama LIKE '%".$_POST['q']."%'))";
+        }
+        if (isset($_POST['dot_id'])) {
+            $strQuery .= " AND dot_id = '".$_POST['dot_id']."'";
         }
         $strQuery .= " ORDER BY dot_id DESC";
         $query = $db->query($strQuery);
@@ -83,13 +87,11 @@ class DraftnotaModel extends Model
                 else break;
             }
             $new_dotid = $available_id?$available_id:1;
-            $db->query("INSERT INTO pos_draftnota(dot_id,dot_tanggal,dot_total,
-                dot_kas_id,dot_kasir,dot_cus_id,dot_lok_id,dot_catatan,
-                dot_diskon,dot_disnom) VALUES(".$new_dotid.",'".
+            $db->query("INSERT INTO pos_draftnota VALUES(".$new_dotid.",'".
                 date_format($date, 'Y-m-d H:i:s')."',".$_POST['total'].",".
                 $_POST['kas_id'].",'".$_POST['kas_nama']."',".$_POST['cus_id'].",".
                 $_POST['lok_id'].",'".$_POST['catatan']."',".
-                $_POST['diskon'].",".$_POST['disnom'].")");
+                $_POST['diskon'].",".$_POST['disnom'].",".$_POST['pajak'].",".$_POST['mej_id'].",'".$_POST['dot_status']."')");
             $error = $db->error();
             if ($error['code'] != 0) {
                 $result['error']['title'] = 'Simpan Header Draft Nota';

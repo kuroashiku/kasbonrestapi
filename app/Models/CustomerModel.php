@@ -10,12 +10,16 @@ class CustomerModel extends Model
         $result['status'] = 'failed';
         $result['data'] = [];
         $clause = '';
-        if (isset($_POST['com_id']))
+        if (isset($_POST['com_id'])){
             $clause = " WHERE cus_com_id=".$_POST['com_id'];
+            if (isset($_POST['key_val']))
+            $clause .= " AND cus_nama LIKE '%".$_POST['key_val']."%'";
+        }
         $query = $db->query("SELECT * FROM pos_customer".$clause." ORDER BY cus_id DESC");
         $error = $db->error();
         if ($error['code'] == 0) {
             $result['data'] = $query->getResult();
+            $result['sql'] = (string)($db->getLastQuery());
             $result['status'] = 'success';
         }
         else {
@@ -24,7 +28,29 @@ class CustomerModel extends Model
         }
         return $result;
     }
-
+    
+    function read_count()
+    {
+        $db = db_connect();
+        $result['status'] = 'failed';
+        $result['data'] = [];
+        $clause = '';
+        if (isset($_POST['com_id'])){
+            $clause = " WHERE cus_com_id=".$_POST['com_id'];
+        }
+        $query = $db->query("SELECT count(*) total FROM pos_customer".$clause." ORDER BY cus_id DESC");
+        $error = $db->error();
+        if ($error['code'] == 0) {
+            $result['data'] = $query->getRow();
+            $result['status'] = 'success';
+        }
+        else {
+            $result['error']['title'] = 'Baca Data Pelanggan';
+            $result['error']['message'] = $error['message'];
+        }
+        return $result;
+    }
+    
     function search()
     {
         $db = db_connect();
@@ -89,6 +115,7 @@ class CustomerModel extends Model
             $builder->set('cus_com_id', $data['cus_com_id']);
             $builder->set('cus_nama', $data['cus_nama']);
             $builder->set('cus_wa', $data['cus_wa']);
+            $builder->set('cus_alamat', $data['cus_alamat']);
             $builder->where('cus_id', $data['cus_id'], false);
             if ($builder->update()) {
                 $query = $db->query("SELECT * FROM pos_customer

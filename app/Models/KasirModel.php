@@ -21,7 +21,6 @@ class KasirModel extends Model
             $row = $query->getRow();
             if($row) {
                 $configModel = new ConfigModel();
-                $configModel->backupDatabase();
                 $result['data'] = $query->getRow();
                 $result['funkode'] = $this->getFunCode($db, $row);
                 $result['status'] = 'success';

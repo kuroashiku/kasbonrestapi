@@ -14,7 +14,7 @@ class ItemModel extends Model
         itm_tgstokopnam,itm_stok,itm_satuan1,itm_satuan1hpp,itm_satuan1hrg,
         itm_satuan2,itm_satuan2hpp,itm_satuan2hrg,itm_satuan2of1,
         itm_satuan3,itm_satuan3hpp,itm_satuan3hrg,itm_satuan3of1,
-        itm_gallery,itm_pakaistok,itm_durasi,itm_satuandurasi';
+        itm_gallery,itm_pakaistok,itm_durasi,itm_satuandurasi,itm_sellable,itm_buyable,itm_urlimage1, itm_urlimage2, itm_urlimage3, itm_kategori';
     }
 
     function read()
@@ -22,9 +22,16 @@ class ItemModel extends Model
         $db = db_connect();
         $page = isset($_POST['page'])?$_POST['page']:null;
         $rows = isset($_POST['rows'])?$_POST['rows']:null;
-        $filter = "itm_lok_id=".$_POST['lok_id'];
+        $limit = isset($_POST['limit'])?$_POST['limit']:null;
+        $filter = "itm_lok_id=".$_POST['lok_id']." AND itm_deleteddate IS NULL ";
         if (isset($_POST['key_val']))
-            $filter .= " AND itm_nama LIKE '%".$_POST['key_val']."%'";
+            $filter .= " AND (itm_nama LIKE '%".$_POST['key_val']."%' OR itm_kode LIKE '%".$_POST['key_val']."%')";
+        if (isset($_POST['category']))
+            $filter .= " AND (".$_POST['category'].") ";
+        if (isset($_POST['sellable']))
+            $filter .= " AND itm_sellable='true'";
+        if (isset($_POST['buyable']))
+            $filter .= " AND itm_buyable='true'";
         if ($page) {
             $query = $db->query("SELECT COUNT(*) total
                 FROM pos_item WHERE ".$filter);
@@ -34,9 +41,14 @@ class ItemModel extends Model
             WHERE ".$filter." ORDER BY itm_id DESC";
         if ($page)
             $queryStr .= " LIMIT " . ($page - 1) * $rows . "," . $rows;
+        if ($limit)
+            $queryStr .= " LIMIT " . $limit ;
         $query = $db->query($queryStr);
         $data = $query->getResult();
+        $result['error']='.Sql: '.
+                        (string)($db->getLastQuery());
         $result['data'] = $data;
+        
         $result['status'] = 'success';
         return $result;
     }
@@ -44,8 +56,11 @@ class ItemModel extends Model
     function readGallery()
     {
         $db = db_connect();
+        $filter = "";
+        if (isset($_POST['key_val']))
+            $filter .= " AND (itm_nama LIKE '%".$_POST['key_val']."%' OR itm_kode LIKE '%".$_POST['key_val']."%')";
         $query = $db->query("SELECT ".$this->columnList().",itm_photo FROM pos_item
-            WHERE itm_lok_id=".$_POST['lok_id']." AND itm_gallery=1
+            WHERE itm_lok_id=".$_POST['lok_id']." AND itm_gallery=1 ".$filter."
             ORDER BY itm_nama");
         $rows = $query->getResult();
         foreach($rows as &$row) {
@@ -61,6 +76,47 @@ class ItemModel extends Model
             }
         }
         $result['data'] = $rows;
+        $result['error']='.Sql: '.
+                        (string)($db->getLastQuery());
+        $result['status'] = 'success';
+        return $result;
+    }
+    
+    function readForCategories()
+    {
+        $db = db_connect();
+        $query = $db->query("SELECT itm_kategori, count(*) itm_total FROM pos_item
+            WHERE itm_lok_id=".$_POST['lok_id']." AND itm_kategori IS NOT NULL AND itm_kategori != '' GROUP BY itm_kategori 
+             UNION
+            SELECT 'TANPA KATEGORI' as itm_kategori, count(*) itm_total FROM pos_item
+            WHERE itm_lok_id=".$_POST['lok_id']." AND (itm_kategori IS NULL OR itm_kategori = '') 
+            ORDER BY itm_kategori ASC");
+        $data = $query->getResult();
+        $data2=[];
+        $detailganjil=[];
+        $detailgenap=[];
+        $tempcount=0;
+        $tempnama='';
+        $tempcount2=0;
+        $tempnama2='';
+        foreach($data as $key =>$row) {
+            if ($key%2==0) {
+                $tempcount=$row->itm_total;
+                $tempnama=$row->itm_kategori;
+                if($key==count($data)-1){
+                    array_push($data2,array('count_ganjil' => $tempcount,'nama_ganjil' => $tempnama,'count_genap' => 0,'nama_genap' => ''));
+                }
+            }
+            else{
+                array_push($data2,array('count_ganjil' => $tempcount,'nama_ganjil' => $tempnama,'count_genap' => $row->itm_total?$row->itm_total:0,'nama_genap' => $row->itm_kategori?$row->itm_kategori:''));
+            }
+        }
+        $result['error']='.Sql: '.
+                        (string)($db->getLastQuery());
+        if (isset($_POST['all']))
+        $result['data'] = $data;
+        else
+        $result['data'] = $data2;
         $result['status'] = 'success';
         return $result;
     }
@@ -201,12 +257,18 @@ class ItemModel extends Model
             $builder->set('itm_kode', $data['itm_kode']);
             $builder->set('itm_lok_id', $data['itm_lok_id']);
             $builder->set('itm_nama', $data['itm_nama']);
+            $builder->set('itm_kategori', $data['itm_kategori']);
             $builder->set('itm_satuan1', $data['itm_satuan1']);
             $builder->set('itm_satuan1hpp', $data['itm_satuan1hpp']);
             $builder->set('itm_satuan1hrg', $data['itm_satuan1hrg']);
+            $builder->set('itm_sellable', $data['itm_sellable']);
+            $builder->set('itm_buyable', $data['itm_buyable']);
             $builder->set('itm_stokaman', $data['itm_stokaman']);
             $builder->set('itm_tgstokopnam', $data['itm_tgstokopnam']);
             $builder->set('itm_stok', $data['itm_stok']);
+            $builder->set('itm_urlimage1', $data['itm_urlimage1']);
+            $builder->set('itm_urlimage2', $data['itm_urlimage2']);
+            $builder->set('itm_urlimage3', $data['itm_urlimage3']);
             if($data['itm_satuan2']!='') {
                 if($data['itm_satuan2']=='***') {
                     $builder->set('itm_satuan2', '');
@@ -316,6 +378,17 @@ class ItemModel extends Model
                 $result['error']['message'] = $error['message'];
             }
         }
+        return $result;
+    }
+    
+    function updateDeleteItem()
+    {
+        $db = db_connect();
+        $result['status'] = 'failed';
+        $db->query("UPDATE pos_item SET itm_deleteddate='".date("Y-m-d H:i:s")."' WHERE itm_id=".$_POST['itm_id']);
+        $result['error']='.Sql: '.
+                        (string)($db->getLastQuery());
+        
         return $result;
     }
 

@@ -54,6 +54,13 @@ class Nota extends ResourceController
         echo json_encode($retobj);
     }
 
+    public function delete_new()
+    {
+        $notaModel = new NotaModel();
+        $retobj = $notaModel->deleteNotaNew();
+        echo json_encode($retobj);
+    }
+    
     public function receipt()
     {
         $notaModel = new NotaModel();

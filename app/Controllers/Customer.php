@@ -12,6 +12,13 @@ class Customer extends ResourceController
         echo json_encode($retobj);
     }
 
+    public function read_count()
+    {
+        $customerModel = new CustomerModel();
+        $retobj = $customerModel->read_count();
+        echo json_encode($retobj);
+    }
+    
     public function search()
     {
         $customerModel = new CustomerModel();

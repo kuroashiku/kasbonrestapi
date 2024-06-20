@@ -131,22 +131,11 @@ class Tambahan extends ResourceController
         $retobj = $tambahanModel->cek_kas();
         echo json_encode($retobj);
     }
-    public function cek_email()
-    {
-        $tambahanModel = new TambahanModel();
-        $retobj = $tambahanModel->cek_email();
-        echo json_encode($retobj);
-    }
+
     public function update_setting()
     {
         $tambahanModel = new TambahanModel();
         $retobj = $tambahanModel->update_setting();
-        echo json_encode($retobj);
-    }
-    public function read_email()
-    {
-        $tambahanModel = new TambahanModel();
-        $retobj = $tambahanModel->read_email();
         echo json_encode($retobj);
     }
     
@@ -160,12 +149,6 @@ class Tambahan extends ResourceController
     {
         $tambahanModel = new TambahanModel();
         $retobj = $tambahanModel->dailyCashierOmzet();
-        echo json_encode($retobj);
-    }
-    public function kategori()
-    {
-        $tambahanModel = new TambahanModel();
-        $retobj = $tambahanModel->readKategoriTop();
         echo json_encode($retobj);
     }
 }

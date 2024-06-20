@@ -326,6 +326,7 @@ class TambahanModel extends Model
         $result['total']=$totalIncome.'/'.$totalOutcome.'/'.$totalLabaKotor;
         return $result;
     }
+
     function netProfit()
     {
         $par = explode('*', $_POST['command']);
@@ -873,20 +874,23 @@ class TambahanModel extends Model
     }
     function columnList()
     {
+        // itm_photo tidak ikut diselect karena data BLOB terlalu besar
+        // menyebabkan lama saat loading
+        // itm_photo hanya diload saat mau menampilkan saja
+
         return 'itm_id,itm_kode,itm_lok_id,itm_nama,itm_satuan,itm_stokaman,
         itm_tgstokopnam,itm_stok,itm_satuan1,itm_satuan1hpp,itm_satuan1hrg,
         itm_satuan2,itm_satuan2hpp,itm_satuan2hrg,itm_satuan2of1,
         itm_satuan3,itm_satuan3hpp,itm_satuan3hrg,itm_satuan3of1,
         itm_gallery,itm_pakaistok,itm_durasi,itm_satuandurasi';
     }
+
     function readGallery()
     {
         $db = db_connect();
         $filter = "itm_lok_id=".$_POST['lok_id'];
         if (isset($_POST['key_val']))
             $filter .= " AND itm_nama LIKE '%".$_POST['key_val']."%'";
-        if (isset($_POST['category_val']))
-            $filter .= " AND itm_category LIKE '%".$_POST['category_val']."%'";
         $query = $db->query("SELECT itm_photo FROM pos_item
             WHERE ".$filter." AND itm_gallery=1
             ORDER BY itm_nama");
@@ -903,16 +907,6 @@ class TambahanModel extends Model
                 $row->itm_photo = base64_encode($imageData);
             }
         }
-        $result['data'] = $rows;
-        $result['status'] = 'success';
-        return $result;
-    }
-    function readKategoriTop()
-    {
-        $db = db_connect();
-        $filter = "itm_lok_id=".$_POST['lok_id'];
-        $query = $db->query("SELECT count(*) jumlah, itm_kategori, itk_logo FROM `pos_item` LEFT JOIN pos_itemkategori ON itm_kategori = itk_kategori WHERE itm_kategori IS NOT NULL AND itm_kategori <> '' AND itk_id IS NOT NULL AND itm_gallery=1 AND ".$filter." GROUP BY itm_kategori ORDER BY count(*) DESC LIMIT 7");
-        $rows = $query->getResult();
         $result['data'] = $rows;
         $result['status'] = 'success';
         return $result;
@@ -1250,20 +1244,7 @@ class TambahanModel extends Model
         $result['sql'] = (string)($db->getLastQuery());
         return $result;
     }
-    public function read_email()
-    {
-        $db = db_connect();
-        $result['status'] = 'success';
-        $new_arr = [];
-        $date = date_create(null, timezone_open("Asia/Jakarta"));
-        $query=$db->query("SELECT * FROM pos_email 
-        WHERE ema_email LIKE '%".$_POST['nama_email']."%'");
-        $data = $query->getResult();
-        foreach($data as $row) {
-            array_push($new_arr, $row->ema_email);
-        }
-        return $new_arr;
-    }
+
     public function cek_otp()
     {
         $db = db_connect();
@@ -1271,20 +1252,6 @@ class TambahanModel extends Model
         $query = $db->query("SELECT count(*) total  
             FROM pos_kodeotp
             WHERE otp_kode='".$_POST['otp_kode']."' AND otp_kas_id='".$_POST['kas_id']."'");
-        $row = $query->getRow();
-        $result['sql'] = (string)($db->getLastQuery());
-        if($row->total>=1)
-        return true;
-        else
-        return false;
-    }
-    public function cek_email()
-    {
-        $db = db_connect();
-        $result['data'] = [];
-        $query = $db->query("SELECT count(*) total  
-            FROM pos_email
-            WHERE ema_email='".$_POST['nama_email']."'");
         $row = $query->getRow();
         $result['sql'] = (string)($db->getLastQuery());
         if($row->total>=1)
@@ -1316,7 +1283,7 @@ class TambahanModel extends Model
         $result['status'] = 'failed';
         $result['data'] = [];
         $strQuery='';
-        if (isset($_POST['kode']) && $_POST['kode']!='' && $_POST['kode']!='null')
+        if (isset($_POST['kode']) && $_POST['kode']!='')
         {
             $strQuery = $strQuery." AND com_kode='".$_POST['kode']."' ";
         }
@@ -1332,7 +1299,6 @@ class TambahanModel extends Model
             $row = $query->getRow();
             if($row) {
                 $configModel = new ConfigModel();
-                $configModel->backupDatabase();
                 $kasirModel = new KasirModel();
                 $result['data'] = $query->getRow();
                 $result['funkode'] = $kasirModel->getFunCode($db, $row);
